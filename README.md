@@ -7,6 +7,7 @@ Submit a pull request to add your benchmarks.
 ```
 i5-7300HQ: 628ms (up to 1e9)
 i5-4310U: 923ms (up to 1e9)
+i5-6200U: 1024ms (up to 1e9)
 ```
 
 ## Compiling
@@ -30,7 +31,7 @@ g++ -std=c++11 -o prime-sieve -Ofast multi-thread.cpp
 prime-sieve [limit]
 ```
 The default sieving limit is `1e9`. Leave `[limit]` blank to use the default limit or replace it with the desired limit.
-For example, to sieve for all prime numbers below 5000, use `./prime-sieve 5000` (for Linux).
+For example, to sieve for all prime numbers below `5000`, use `./prime-sieve 5000` (for Linux).
 
 ## License
 This program is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
