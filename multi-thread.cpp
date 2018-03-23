@@ -29,7 +29,7 @@ num to_num(char *s)
 	return res;
 }
 
-inline bool check_prime(const register num number)
+inline bool check_prime(const num number)
 {
 	if (wheel_size != 0 && wheel[0].test(number % wheel_size))
 		return false;
@@ -67,7 +67,7 @@ void init_primes()
 {
 	primes[max_threads].push_back(2);
 	num limit = sqrt(sieve_lim) + 1;
-	for (register num i = 3; i < limit; i += 2)
+	for (num i = 3; i < limit; i += 2)
 		if (check_prime(i))
 		{
 			primes[max_threads].emplace_back(i);
@@ -93,7 +93,7 @@ void sieve(const data parsed)
 	std::vector<std::pair<num, num>> bucket;
 		
 	// initialize bucket
-	for (register num prime : primes)
+	for (num prime : primes)
 		if ((limit - 1) / prime + 1 <= prime) break;
 		else
 		{

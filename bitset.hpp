@@ -1,5 +1,11 @@
 #include <cstring>
 
+static const int bitpos[32] =
+{
+  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+  31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+};
+
 namespace usr
 {
 
@@ -7,23 +13,24 @@ template <int SIZE>
 class bitset
 {
 private:
-	int length, *memory, first;
+	int length, first;
+	uint32_t *memory;
 	
 public:
 	bitset()
 	{
 		length = ((SIZE - 1) >> 5) + 1;
-		memory = new int [length];
+		memory = new uint32_t [length];
 		memset(memory, 0x00, length << 2);
 		first = 0;
 	}
 	
-	inline bool test(register const int x)
+	inline bool test(const int x)
 	{
 		return memory[x >> 5] >> (x & 31) & 1;
 	}
 	
-	inline void set(register const int x)
+	inline void set(const int x)
 	{
 		memory[x >> 5] |= 1 << (x & 31);
 	}
@@ -34,14 +41,11 @@ public:
 		while (first < length && ~memory[first] == 0) ++first;
 		if (first == length) return length << 5;
 		
-		register int res = ((first + 1) << 5) - 1;
-		register int value = ~memory[first];
+		int res = first << 5;
+		uint32_t value = ~memory[first];
 		
-		if (value << 16 != 0) { value <<= 16; res -= 16; }
-		if (value << 8 != 0) { value <<= 8; res -= 8; }
-		if (value << 4 != 0) { value <<= 4; res -= 4; }
-		if (value << 2 != 0) { value <<= 2; res -= 2; }
-		if (value << 1 != 0) { value <<= 1; res -= 1; }
+		// using de Bruijn multiplication to find the least signinficant '1' bit
+		res += bitpos[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
 			
 		set(res);
 		return res;
