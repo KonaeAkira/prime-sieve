@@ -3,14 +3,15 @@ A somewhat fast C++ implementation of a prime sieve.
 
 ## Benchmarks
 Submit a pull request to add your benchmarks.
+
 ```
-i5-4310U: 1078ms (up to 1e9)
-i5-6200U: 1249ms (up to 1e9)
+i5-7300HQ: 628ms (up to 1e9)
+i5-4310U: 923ms (up to 1e9)
 ```
 
 ## Compiling
 You will need a compiler supporting C++11 to compile.
-#### GNU/Linux
+#### Linux
 ```
 g++ -std=c++11 -o prime-sieve -pthread -Ofast multi-thread.cpp
 ```
@@ -20,7 +21,7 @@ g++ -std=c++11 -o prime-sieve -Ofast multi-thread.cpp
 ```
 
 ## Usage
-#### GNU/Linux
+#### Linux
 ```
 ./prime-sieve [limit]
 ```
@@ -28,7 +29,8 @@ g++ -std=c++11 -o prime-sieve -Ofast multi-thread.cpp
 ```
 prime-sieve [limit]
 ```
-The default sieving limit is 1e9. Leave **\[limit]** blank to use the default limit or replace it with the desired limit.
+The default sieving limit is `1e9`. Leave `[limit]` blank to use the default limit or replace it with the desired limit.
+For example, to sieve for all prime numbers below 5000, use `./prime-sieve 5000` (for Linux).
 
 ## License
 This program is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
