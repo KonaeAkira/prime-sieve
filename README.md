@@ -31,4 +31,4 @@ prime-sieve [limit]
 The default sieving limit is 1e9. Leave **\[limit]** blank to use the default limit or replace it with the desired limit.
 
 ## License
-This software is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This program is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
