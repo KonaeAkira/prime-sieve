@@ -3,8 +3,9 @@
 #include <cmath>
 #include <thread>
 #include <vector>
-#include <bitset>
 #include <chrono>
+
+#include "bitset.hpp"
 
 typedef int num;
 struct data { std::vector<num> &result, &primes; num begin, limit; };
@@ -14,9 +15,9 @@ const int max_threads = std::thread::hardware_concurrency();
 const num max_sieve_size = 1 << 15;
 num estimated_count, sieve_lim = 1e9;
     
-int wheel_count = 3;
+int wheel_count = 4;
 int wheel_size;
-std::bitset<max_sieve_size> *wheel;
+usr::bitset<max_sieve_size> *wheel;
 
 std::vector<num> *primes;
 
@@ -53,7 +54,7 @@ void init_wheel()
 	for (num &prime : primes[max_threads])
 		wheel_size *= prime;
 	
-	wheel = new std::bitset<max_sieve_size> [wheel_size];
+	wheel = new usr::bitset<max_sieve_size> [wheel_size];
 	
 	for (num &prime : primes[max_threads])
 		for (int j = 0; j < max_sieve_size + wheel_size; j += prime)
@@ -64,6 +65,7 @@ void init_wheel()
 
 void init_primes()
 {
+	primes[max_threads].push_back(2);
 	num limit = sqrt(sieve_lim) + 1;
 	for (register num i = 3; i < limit; i += 2)
 		if (check_prime(i))
@@ -86,7 +88,7 @@ void sieve(const data parsed)
 	                       
 	const int sieve_size = std::min(max_sieve_size, limit - begin); // size per sieve
 	const int sieve_count = (limit - begin - 1) / sieve_size + 1; // amount of times to run the sieve
-	std::bitset<max_sieve_size> bitset; // bitset to mark composite numbers
+	usr::bitset<max_sieve_size> bitset; // bitset to mark composite numbers
 	
 	std::vector<std::pair<num, num>> bucket;
 		
@@ -121,9 +123,12 @@ void sieve(const data parsed)
 		}
 	
 		//iterate over bitset to find primes
-		for (num number = !(begin & 1); number < sieve_size; number += 2)
-			if (!bitset.test(number))
-				result.emplace_back(number + begin);
+		num number = bitset.extract();
+		while (number < sieve_size)
+		{
+			result.push_back(begin + number);
+			number = bitset.extract();
+		}
 				
 		begin += sieve_size;
 	}
@@ -161,7 +166,7 @@ int main(int argc, char **argv)
 	// end clock
 	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
 	
-	num prime_count = wheel_count + 1; // to account for '2', which is not stored
+	num prime_count = wheel_count; // to account for '2', which is not stored
 	for (int i = 0; i <= max_threads; ++i)
 		prime_count += primes[i].size();
 	std::cout << "Counted " << prime_count << " primes!\n";
