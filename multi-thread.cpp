@@ -8,18 +8,23 @@
 #include "bitset.hpp"
 
 typedef int num;
-struct data { std::vector<num> &result, &primes; num begin, limit; };
+// struct to pass as argument to threads
+struct data { std::vector<num> &result; num begin, limit; };
 typedef std::pair<num, num> num_pair;
 
 const int max_threads = std::thread::hardware_concurrency();
-const num max_sieve_size = 1 << 15;
-num estimated_count, sieve_lim = 1e9;
-    
-int wheel_count = 4;
-int wheel_size;
-usr::bitset<max_sieve_size> *wheel;
+const int wheel_size = 2 * 3 * 5 * 7 * 11 * 13;
+const int wheel_count = 6; // number of primes in the wheel
+const int wheel_primes[wheel_count] = {2, 3, 5, 7, 11, 13};
+const int segment_size = wheel_size * 4;
 
-std::vector<num> *primes;
+usr::bitset<segment_size> offset_wheel; // wheel to use in the sieve
+usr::bitset<wheel_size> normal_wheel; // wheel to speed up trial division
+
+int sieve_limit = 1e9; // default sieve limit
+
+std::vector<int> base_primes;
+std::vector<num> *thread_primes;
 
 num to_num(char *s)
 {
@@ -29,71 +34,51 @@ num to_num(char *s)
 	return res;
 }
 
-inline bool check_prime(const num number)
+bool check_prime(const int number)
 {
-	if (wheel_size != 0 && wheel[0].test(number % wheel_size))
+	// check if number is already marked in the wheel
+	if (normal_wheel.test(number % wheel_size))
 		return false;
-	num limit = sqrt(number);
-	for (num &prime : primes[max_threads])
+	// factor by trial division
+	int limit = sqrt(number);
+	for (int prime : base_primes)
 		if (number % prime == 0) return false;
 		else if (prime > limit) return true;
 	return true;
 }
 
-void init_memory()
+void init_wheel(int offset)
 {
-	estimated_count = (float)sieve_lim / log(sieve_lim) * 1.2;
-	primes = new std::vector<num> [max_threads + 1];
-	for (int i = 0; i < max_threads; ++i)
-		primes[i].reserve(estimated_count / max_threads);
+	for (int prime : wheel_primes)
+	{
+		for (int current = 0; current < segment_size + offset; current += prime)
+			if (current >= offset)
+				offset_wheel.set(current - offset);
+		for (int current = 0; current < wheel_size; current += prime)
+			normal_wheel.set(current);
+	}
 }
 
-void init_wheel()
+void init_primes(const int limit)
 {
-	wheel_size = 1;
-	for (num &prime : primes[max_threads])
-		wheel_size *= prime;
-	
-	wheel = new usr::bitset<max_sieve_size> [wheel_size];
-	
-	for (num &prime : primes[max_threads])
-		for (int j = 0; j < max_sieve_size + wheel_size; j += prime)
-			for (int k = 0; k < wheel_size; ++k)
-				if (j >= k && j - k < max_sieve_size)
-					wheel[k].set(j - k);
-}
-
-void init_primes()
-{
-	primes[max_threads].push_back(2);
-	num limit = sqrt(sieve_lim) + 1;
-	for (num i = 3; i < limit; i += 2)
-		if (check_prime(i))
-		{
-			primes[max_threads].emplace_back(i);
-			if (wheel_size == 0 && (int)primes[max_threads].size() == wheel_count)
-			{
-				init_wheel();
-				primes[max_threads].clear();
-			}
-		}
+	// construct base_primes by trial division
+	int current = wheel_primes[wheel_count - 1];
+	while ((current += 2) < limit)
+		if (check_prime(current))
+			base_primes.emplace_back(current);
 }
 
 void sieve(const data parsed)
 {
-	const std::vector<num> &primes = parsed.primes; // primes used for the sieve
 	std::vector<num> &result = parsed.result; // result vector
 	num begin = parsed.begin; // current starting point of sieve
 	const num limit = parsed.limit; // sieve limit
-	                       
-	const int sieve_size = std::min(max_sieve_size, limit - begin); // size per sieve
-	const int sieve_count = (limit - begin - 1) / sieve_size + 1; // amount of times to run the sieve
-	usr::bitset<max_sieve_size> bitset; // bitset to mark composite numbers
-	
-	std::vector<std::pair<num, num>> bucket;
+
+	usr::bitset<segment_size> bitset; // bitset to mark composite numbers
+	std::vector<std::pair<num, num>> bucket; // vector to store primes used for sieving
 		
 	// initialize bucket
-	for (num prime : primes)
+	for (num prime : base_primes)
 		if ((limit - 1) / prime + 1 <= prime) break;
 		else
 		{
@@ -101,36 +86,33 @@ void sieve(const data parsed)
 			if (first % 2 == 0) first += prime;
 			bucket.push_back({prime * 2, first - begin});
 		}
-	
+
 	// sieve
-	for (int iter = 0; iter < sieve_count; ++iter)
+	while (begin != limit)
 	{			
-		const num target = std::min(limit, begin + sieve_size);
-		const num sieve_size = target - begin;
-		
 		// initialize bitset from wheel
-		bitset = wheel[begin % wheel_size];
+		bitset = offset_wheel;
 		
 		// iterate over all primes in bucket
 		for (std::pair<int, int> &cur : bucket)
 		{
-			while (cur.second < sieve_size)
+			while (cur.second < segment_size)
 			{
 				bitset.set(cur.second);
 				cur.second += cur.first;
 			}
-			cur.second -= sieve_size;
+			cur.second -= segment_size;
 		}
 	
 		//iterate over bitset to find primes
 		num number = bitset.extract();
-		while (number < sieve_size)
+		while (number < segment_size)
 		{
 			result.push_back(begin + number);
 			number = bitset.extract();
 		}
 				
-		begin += sieve_size;
+		begin += segment_size;
 	}
 }
 
@@ -139,41 +121,53 @@ int main(int argc, char **argv)
 	std::cout << "Detected " << max_threads << " usable threads\n";
 
 	// get enviroment arguments
-	if (argc >= 2) sieve_lim = to_num(argv[1]);
-	std::cout << "Sieve limit set to " << sieve_lim << '\n';
+	if (argc >= 2) sieve_limit = to_num(argv[1]);
+	std::cout << "Sieve limit set to " << sieve_limit << '\n';
 	
 	// start clock
 	std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 	
-	init_memory();
-	init_primes();
+	// set lower bound for sieve
+	int sieve_begin = sqrt(sieve_limit) + 1;
+	int	sieve_worksize = (sieve_limit - sieve_begin) / segment_size;
+	sieve_begin = sieve_limit - sieve_worksize * segment_size;
+	
+	// initialize base prime numbers and prime wheel
+	init_wheel(sieve_begin % wheel_size);
+	init_primes(sieve_begin);
 	
 	// spawn threads
+	thread_primes = new std::vector<num> [max_threads];
 	std::thread *threads = new std::thread [max_threads];
-	const num begin = sqrt(sieve_lim) + 1;
-	const num worksize = (sieve_lim - begin - 1) / max_threads + 1;
-	for (int i = max_threads - 1; i >= 0; --i)
+	for (int i = 0; i < max_threads; ++i)
 	{
-		const num start = begin + worksize * i;
-		const num limit = std::min(start + worksize, sieve_lim);
-		threads[i] = std::thread(sieve, (data){primes[i], primes[max_threads], start, limit});
+		// calculate worksize for this thread
+		const int thread_worksize = (sieve_worksize - 1) / (max_threads - i) + 1;
+		const int thread_limit = sieve_begin + thread_worksize * segment_size;
+		// spawn thread
+		threads[i] = std::thread(sieve, (data){thread_primes[i], sieve_begin, thread_limit});
+		// decrement total worksize and increment lower bound
+		sieve_worksize -= thread_worksize;
+		sieve_begin = thread_limit;
 	}
 	
 	// join threads
-	for (int i = 0; i < max_threads; ++i)
-		threads[i].join();
+	for (int i = 0; i < max_threads; ++i) threads[i].join();
 	
 	// end clock
 	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
 	
-	num prime_count = wheel_count; // to account for '2', which is not stored
-	for (int i = 0; i <= max_threads; ++i)
-		prime_count += primes[i].size();
+	// count the amount of primes calculated
+	int prime_count = wheel_count + base_primes.size();
+	for (int i = 0; i < max_threads; ++i)
+		prime_count += thread_primes[i].size();
+		
 	std::cout << "Counted " << prime_count << " primes!\n";
 	std::cout << "Execution took ";
 	std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000;
 	std::cout << "ms\n";
 	
-	if (sieve_lim == 1e9 && prime_count != 50847534)
+	// check prime count (for debugging purposes)
+	if (sieve_limit == 1e9 && prime_count != 50847534)
 		std::cout << "ERROR: Prime count does not match! (should be 50847534)\n";
 }

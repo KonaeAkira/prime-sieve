@@ -15,12 +15,14 @@ class bitset
 private:
 	int length, first;
 	uint32_t *memory;
+	// the bitset actually stores the inverse of what it's supposed to
+	// this is in order to optimize for 'set' operations
 	
 public:
 	bitset()
 	{
 		length = ((SIZE - 1) >> 5) + 1;
-		memory = new uint32_t [length];
+		memory = new uint32_t [length + 1]; // create an extra field to optimize for extraction
 		memset(memory, 0x00, length << 2);
 		first = 0;
 	}
@@ -38,8 +40,9 @@ public:
 	// return smallest empty bit and set it
 	int extract()
 	{
-		while (first < length && ~memory[first] == 0) ++first;
-		if (first == length) return length << 5;
+		if (~memory[first] == 0)
+			do { ++first; } while (~memory[first] == 0);
+		if (first == length) return SIZE;
 		
 		int res = first << 5;
 		uint32_t value = ~memory[first];
