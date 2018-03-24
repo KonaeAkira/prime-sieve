@@ -10,7 +10,6 @@
 typedef int num;
 // struct to pass as argument to threads
 struct data { std::vector<num> &result; num begin, limit; };
-typedef std::pair<num, num> num_pair;
 
 const int max_threads = std::thread::hardware_concurrency();
 const int wheel_size = 2 * 3 * 5 * 7 * 11 * 13;
@@ -18,8 +17,7 @@ const int wheel_count = 6; // number of primes in the wheel
 const int wheel_primes[wheel_count] = {2, 3, 5, 7, 11, 13};
 const int segment_size = wheel_size * 4;
 
-usr::bitset<segment_size> offset_wheel; // wheel to use in the sieve
-usr::bitset<wheel_size> normal_wheel; // wheel to speed up trial division
+lib::bitset<segment_size> offset_wheel; // wheel to use in the sieve
 
 int sieve_limit = 1e9; // default sieve limit
 
@@ -34,38 +32,26 @@ num to_num(char *s)
 	return res;
 }
 
-bool check_prime(const int number)
-{
-	// check if number is already marked in the wheel
-	if (normal_wheel.test(number % wheel_size))
-		return false;
-	// factor by trial division
-	int limit = sqrt(number);
-	for (int prime : base_primes)
-		if (number % prime == 0) return false;
-		else if (prime > limit) return true;
-	return true;
-}
-
 void init_wheel(int offset)
 {
 	for (int prime : wheel_primes)
-	{
 		for (int current = 0; current < segment_size + offset; current += prime)
 			if (current >= offset)
 				offset_wheel.set(current - offset);
-		for (int current = 0; current < wheel_size; current += prime)
-			normal_wheel.set(current);
-	}
 }
 
-void init_primes(const int limit)
+void init_primes(const size_t limit)
 {
-	// construct base_primes by trial division
-	int current = wheel_primes[wheel_count - 1];
-	while ((current += 2) < limit)
-		if (check_prime(current))
-			base_primes.emplace_back(current);
+	bool *sieve = new bool [limit];
+	memset(sieve, 0x00, limit);
+	size_t lower = wheel_primes[wheel_count - 1];
+	for (size_t i = 3; i < limit; i += 2)
+		if (!sieve[i])
+		{
+			if (i > lower) base_primes.push_back(i);
+			for (size_t j = i * i; j < limit; j += i)
+				sieve[j] = true;
+		}
 }
 
 void sieve(const data parsed)
@@ -74,7 +60,7 @@ void sieve(const data parsed)
 	num begin = parsed.begin; // current starting point of sieve
 	const num limit = parsed.limit; // sieve limit
 
-	usr::bitset<segment_size> bitset; // bitset to mark composite numbers
+	lib::bitset<segment_size> bitset; // bitset to mark composite numbers
 	std::vector<std::pair<num, num>> bucket; // vector to store primes used for sieving
 		
 	// initialize bucket
@@ -118,7 +104,7 @@ void sieve(const data parsed)
 
 int main(int argc, char **argv)
 {	
-	std::cout << "Detected " << max_threads << " usable threads\n";
+	std::cout << "Found " << max_threads << " usable threads\n";
 
 	// get enviroment arguments
 	if (argc >= 2) sieve_limit = to_num(argv[1]);

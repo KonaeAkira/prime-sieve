@@ -5,7 +5,7 @@ A somewhat fast C++ implementation of a prime sieve.
 Submit a pull request to add your benchmarks.
 
 ```
-i5-4310U: 674ms (up to 1e9)
+i5-4310U: 658ms (up to 1e9)
 ```
 
 ## Compiling
