@@ -6,6 +6,7 @@ Submit a pull request to add your benchmarks.
 
 ```
 i5-4310U: 658ms (up to 1e9)
+i5-4460: 447ms (up to 1e9)
 ```
 
 ## Compiling
