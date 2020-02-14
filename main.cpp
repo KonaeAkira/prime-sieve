@@ -5,12 +5,13 @@
 #include <algorithm>
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 #include "primelist.hpp"
 
 const uint32_t SIEVE_LIMIT = 1e9;
 
-const uint32_t THREADS = 8;
+const uint32_t THREADS = std::thread::hardware_concurrency();
 
 const uint32_t WHEEL_SIZE = 2 * 3 * 5 * 7;
 const std::bitset<WHEEL_SIZE> WHEEL("011111111101011101011101111101011111011101011101111101111101011111011101011111011101111101111111011101011101011101111111011111011101111101011101111101011111011111011101011101111101011111011101011101011111111101");
@@ -82,6 +83,7 @@ void sieve_segment(const uint32_t START_BLOCK, const uint32_t END_BLOCK)
 int main()
 {
 	printf("Sieving to %d using %d threads\n", SIEVE_LIMIT, THREADS);
+	std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
 	std::vector<std::thread*> threads;
 	for (uint32_t block = 0, job_size; block < BLOCK_COUNT; block += job_size)
 	{
@@ -93,6 +95,8 @@ int main()
 	}
 	for (std::thread *thread : threads)
 		thread->join();
+	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
 	printf("Counted %d primes\n", count + 3); // 4 wheel primes - number 1 counted as prime
+	printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
 	return 0;
 }
