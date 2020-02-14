@@ -1,36 +1,31 @@
 # prime-sieve
+
+## Description
 A somewhat fast C++ implementation of a prime sieve.
 
+Not meant for production. This is just the result of some teenager with too much time on their hands.
+
+The algorithm uses the segmented sieve of Eratosthenes with bucket sieve and a modulo 210 wheel.
+
 ## Benchmarks
+Average time to find all primes below `1e9`.
+
 Submit a pull request to add your benchmarks.
 
-```
-i5-4310U: 658ms (up to 1e9)
-i5-4460: 447ms (up to 1e9)
-```
+CPU | Single-Threaded | Multi-Threaded
+:---: | ---: | ---: |
+Intel i5-8265U | 1135 ms | 304 ms
 
 ## Compiling
-You will need a compiler supporting C++11 to compile.
+Most compilers with C++11 will do.
 #### Linux
 ```
-g++ -std=c++11 -o prime-sieve -pthread -Ofast multi-thread.cpp
+g++ -std=c++11 -o prime-sieve -pthread -Ofast main.cpp
 ```
 #### Windows
 ```
-g++ -std=c++11 -o prime-sieve -Ofast multi-thread.cpp
+g++ -std=c++11 -o prime-sieve.exe -Ofast main.cpp
 ```
-
-## Usage
-#### Linux
-```
-./prime-sieve [limit]
-```
-#### Windows
-```
-prime-sieve [limit]
-```
-The default sieving limit is `1e9`. Leave `[limit]` blank to use the default limit or replace it with the desired limit.
-For example, to sieve for all prime numbers below `5000`, use `./prime-sieve 5000` (for Linux).
 
 ## License
 This program is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
