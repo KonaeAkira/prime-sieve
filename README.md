@@ -23,9 +23,7 @@ Most compilers with C++11 will do.
 g++ -std=c++11 -o prime-sieve -pthread -Ofast main.cpp
 ```
 #### Windows
-```
-g++ -std=c++11 -o prime-sieve.exe -Ofast main.cpp
-```
+Please use Linux.
 
 ## License
 This program is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
