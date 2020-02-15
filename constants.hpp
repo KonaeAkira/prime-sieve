@@ -43,7 +43,7 @@ constexpr std::array<uint64_t, HOLES_COUNT + 1> get_holes()
 }
 constexpr std::array<uint64_t, HOLES_COUNT + 1> HOLES = get_holes();
 
-constexpr uint64_t get_SIEVE_PRIMES_COUNT()
+constexpr uint64_t get_sieve_primes_count()
 {
 	bs2::bitset2<SIEVE_LIMIT_SQRT> bitset;
 	for (const uint64_t prime : WHEEL_PRIMES)
@@ -59,9 +59,9 @@ constexpr uint64_t get_SIEVE_PRIMES_COUNT()
 		}
 	return count;
 }
-constexpr uint64_t SIEVE_PRIMES_COUNT = get_SIEVE_PRIMES_COUNT();
+constexpr uint64_t SIEVE_PRIMES_COUNT = get_sieve_primes_count();
 
-constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> get_SIEVE_PRIMES()
+constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> get_sieve_primes()
 {
 	bs2::bitset2<SIEVE_LIMIT_SQRT> bitset;
 	for (const uint64_t prime : WHEEL_PRIMES)
@@ -78,11 +78,11 @@ constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> get_SIEVE_PRIMES()
 		}
 	return array;
 }
-constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> SIEVE_PRIMES = get_SIEVE_PRIMES();
+constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> SIEVE_PRIMES = get_sieve_primes();
 
 constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t BLOCK_COUNT = (SIEVE_LIMIT - 1) / (BLOCK_SIZE * WHEEL_SIZE) + 1;
 
-const uint64_t THREADS = 1; //std::thread::hardware_concurrency();
+const uint64_t THREADS = std::thread::hardware_concurrency();
 
 #endif

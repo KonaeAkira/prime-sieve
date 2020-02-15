@@ -86,5 +86,7 @@ int main()
 	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
 	printf("Counted %d primes\n", count);
 	printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
+	if (SIEVE_LIMIT == 1e9 && count != 50847534)
+		printf("\e[0;31m[ERROR] \e[0mCount should be 50847534\n");
 	return 0;
 }
