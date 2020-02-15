@@ -8,7 +8,7 @@
 namespace bs2 = Bitset2;
 
 constexpr uint64_t SIEVE_LIMIT = 1e9;
-constexpr uint64_t SIEVE_LIMIT_SQRT = std::sqrt(SIEVE_LIMIT);
+constexpr uint64_t SIEVE_LIMIT_SQRT = std::sqrt(SIEVE_LIMIT) + 1;
 
 constexpr uint64_t WHEEL_PRIMES[6] = {2, 3, 5, 7, 11, 13};
 
@@ -46,16 +46,13 @@ constexpr std::array<uint64_t, HOLES_COUNT + 1> HOLES = get_holes();
 constexpr uint64_t get_sieve_primes_count()
 {
 	bs2::bitset2<SIEVE_LIMIT_SQRT> bitset;
-	for (const uint64_t prime : WHEEL_PRIMES)
-		for (uint64_t i = 0; i < SIEVE_LIMIT_SQRT; i += prime)
-			bitset.set(i);
 	uint64_t count = 0;
-	for (uint64_t i = 2; i < SIEVE_LIMIT_SQRT; ++i)
-		if (!bitset.test(i))
+	for (uint64_t i = 3; i < SIEVE_LIMIT_SQRT; i += 2)
+		if (!bitset.test(i) && !WHEEL.test(i % WHEEL_SIZE))
 		{
 			++count;
 			for (uint64_t j = i * i; j < SIEVE_LIMIT_SQRT; j += i)
-				bitset.set(j);			
+				bitset.set(j);
 		}
 	return count;
 }
@@ -64,17 +61,14 @@ constexpr uint64_t SIEVE_PRIMES_COUNT = get_sieve_primes_count();
 constexpr std::array<uint64_t, SIEVE_PRIMES_COUNT> get_sieve_primes()
 {
 	bs2::bitset2<SIEVE_LIMIT_SQRT> bitset;
-	for (const uint64_t prime : WHEEL_PRIMES)
-		for (uint64_t i = 0; i < SIEVE_LIMIT_SQRT; i += prime)
-			bitset.set(i);
 	std::array<uint64_t, SIEVE_PRIMES_COUNT> array = {};
 	uint64_t count = 0;
-	for (uint64_t i = 2; i < SIEVE_LIMIT_SQRT; ++i)
-		if (!bitset.test(i))
+	for (uint64_t i = 3; i < SIEVE_LIMIT_SQRT; i += 2)
+		if (!bitset.test(i) && !WHEEL.test(i % WHEEL_SIZE))
 		{
 			array[count++] = i;
 			for (uint64_t j = i * i; j < SIEVE_LIMIT_SQRT; j += i)
-				bitset.set(j);			
+				bitset.set(j);
 		}
 	return array;
 }
