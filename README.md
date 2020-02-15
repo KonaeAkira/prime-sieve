@@ -5,7 +5,7 @@ A somewhat fast C++ implementation of a prime sieve.
 
 Not meant for production. This is just the result of some teenager with too much time on their hands.
 
-The algorithm uses the segmented sieve of Eratosthenes with bucket sieve and a modulo 210 wheel.
+The algorithm uses the segmented sieve of Eratosthenes with bucket sieve and a modulo 30030 wheel.
 
 ## Benchmarks
 Average time to find all primes below `1e9`.
