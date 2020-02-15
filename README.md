@@ -14,13 +14,13 @@ Submit a pull request to add your benchmarks.
 
 CPU | Single-Threaded | Multi-Threaded
 :---: | ---: | ---: |
-Intel i5-8265U | 1135 ms | 304 ms
+Intel i5-8265U | 849 ms | 220 ms
 
 ## Compiling
-Most compilers with C++11 will do.
+Most compilers with C++17 will do.
 #### Linux
 ```
-g++ -std=c++11 -o prime-sieve -pthread -Ofast main.cpp
+g++ -std=c++17 -Ofast -pthread main.cpp -o prime-sieve
 ```
 #### Windows
 Please use Linux.
