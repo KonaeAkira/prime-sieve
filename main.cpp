@@ -17,13 +17,13 @@ const uint64_t SIEVE_LIM_SQRT = std::sqrt(SIEVE_LIM);
 
 const uint32_t THREADS = std::thread::hardware_concurrency();
 
-const uint64_t SEGMENT_SIZE = 1 << 13;
+const uint64_t SEGMENT_SIZE = 1 << 11;
 
 void presieve(std::vector<number> &primes)
 {
 	std::bitset<SIEVE_LIM_SQRT + 1> bitset;
-	const uint64_t offset[8] = {6, 4, 2, 4, 2, 4, 6, 2};
-	for (uint64_t i = 7, j = 0; i <= SIEVE_LIM_SQRT; i += offset[++j &= 7])
+	const uint64_t offset[48] = {10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4, 2, 6, 4, 6, 8, 4, 2, 4, 2, 4, 8, 6, 4, 6, 2, 4, 6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10, 2};
+	for (uint64_t i = 11, j = 0; i <= SIEVE_LIM_SQRT; i += offset[++j %= 48])
 		if (!bitset.test(i))
 		{
 			primes.emplace_back(i);
@@ -38,25 +38,25 @@ void sieve(const std::vector<number> &primes, const uint64_t begin_segment, cons
 	std::vector<number> bucket;
 	bucket.reserve(primes.size());
 	for (const number prime : primes)
-		bucket.emplace_back(prime.get_number(), begin_segment * SEGMENT_SIZE * 30);
-	std::bitset<SEGMENT_SIZE * 8> bitset;
+		bucket.emplace_back(prime.get_number(), begin_segment * SEGMENT_SIZE * 210);
+	std::bitset<SEGMENT_SIZE * 48> bitset;
 	for (uint64_t segment = begin_segment; segment < end_segment; ++segment)
 	{
 		const uint64_t begin_block = segment * SEGMENT_SIZE;
 		const uint64_t end_block = (segment + 1) * SEGMENT_SIZE;
 		bitset.reset();
-		for (uint32_t i = 0; i < bucket.size(); ++i)
+		for (uint32_t i = 0; i < primes.size(); ++i)
 			while (bucket[i].get_block() < end_block)
 			{
-				bitset.set((bucket[i].get_block() - begin_block << 3) + bucket[i].get_rest());
+				bitset.set((bucket[i].get_block() - begin_block) * 48 + bucket[i].get_rest());
 				bucket[i] += primes[i];
 			}
-		if (end_block * 30 <= SIEVE_LIM)
+		if (end_block * 210 <= SIEVE_LIM)
 			internal_count += bitset.size() - bitset.count();
 		else
 		{
-			const uint8_t value[8] = {1, 7, 11, 13, 17, 19, 23, 29};
-			for (uint64_t i = 0; (begin_block + (i >> 3)) * 30 + value[i & 7] < SIEVE_LIM; ++i)
+			const uint16_t value[48] = {1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 121, 127, 131, 137, 139, 143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209};
+			for (uint64_t i = 0; (begin_block + i / 48) * 210 + value[i % 48] < SIEVE_LIM; ++i)
 				internal_count += !bitset.test(i);
 			break;
 		}
@@ -78,12 +78,12 @@ int main()
 	std::vector<number> primes;
 	presieve(primes);
 	
-	uint64_t prime_count = 2;
+	uint64_t prime_count = 3;
 	std::mutex prime_count_mutex;
 	
 	// spawn workers
 	std::vector<std::thread*> threads;
-	uint64_t segment_count = (SIEVE_LIM - 1) / (SEGMENT_SIZE * 30) + 1;
+	uint64_t segment_count = (SIEVE_LIM - 1) / (SEGMENT_SIZE * 210) + 1;
 	while (segment_count > 0)
 	{
 		uint64_t start_segment = segment_count - (segment_count / (THREADS - threads.size()));
