@@ -9,18 +9,21 @@
 
 #include "number.hpp"
 
+#define unlikely(expr) __builtin_expect(!!(expr), 0)
+#define likely(expr) __builtin_expect(!!(expr), 1)
+
 const uint64_t SIEVE_LIM = 1e9;
 const uint64_t SIEVE_LIM_SQRT = std::sqrt(SIEVE_LIM);
 
 const uint32_t THREADS = std::thread::hardware_concurrency();
 
-const uint64_t SEGMENT_SIZE = 1 << 16;
+const uint64_t SEGMENT_SIZE = 1 << 13;
 
 void presieve(std::vector<number> &primes)
 {
 	std::bitset<SIEVE_LIM_SQRT + 1> bitset;
 	const uint64_t offset[8] = {6, 4, 2, 4, 2, 4, 6, 2};
-	for (uint64_t i = 7, j = 0; i <= SIEVE_LIM_SQRT; i += offset[++j %= 8])
+	for (uint64_t i = 7, j = 0; i <= SIEVE_LIM_SQRT; i += offset[++j &= 7])
 		if (!bitset.test(i))
 		{
 			primes.emplace_back(i);
@@ -45,7 +48,7 @@ void sieve(const std::vector<number> &primes, const uint64_t begin_segment, cons
 		for (uint32_t i = 0; i < bucket.size(); ++i)
 			while (bucket[i].get_block() < end_block)
 			{
-				bitset.set((bucket[i].get_block() - begin_block) * 8 + bucket[i].get_rest());
+				bitset.set((bucket[i].get_block() - begin_block << 3) + bucket[i].get_rest());
 				bucket[i] += primes[i];
 			}
 		if (end_block * 30 <= SIEVE_LIM)
@@ -53,7 +56,7 @@ void sieve(const std::vector<number> &primes, const uint64_t begin_segment, cons
 		else
 		{
 			const uint8_t value[8] = {1, 7, 11, 13, 17, 19, 23, 29};
-			for (uint64_t i = 0; (begin_block + i / 8) * 30 + value[i % 8] < SIEVE_LIM; ++i)
+			for (uint64_t i = 0; (begin_block + (i >> 3)) * 30 + value[i & 7] < SIEVE_LIM; ++i)
 				internal_count += !bitset.test(i);
 			break;
 		}
