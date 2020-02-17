@@ -9,15 +9,16 @@
 
 #include "number.hpp"
 
-#define unlikely(expr) __builtin_expect(!!(expr), 0)
-#define likely(expr) __builtin_expect(!!(expr), 1)
-
 const uint64_t SIEVE_LIM = 1e9;
 const uint64_t SIEVE_LIM_SQRT = std::sqrt(SIEVE_LIM);
 
-const uint32_t THREADS = std::thread::hardware_concurrency();
+#ifdef SINGLE_THREAD
+	const uint64_t THREADS = 1;
+#else
+	const uint32_t THREADS = std::thread::hardware_concurrency();
+#endif
 
-const uint64_t SEGMENT_SIZE = 1 << 13;
+const uint64_t SEGMENT_SIZE = SIZE;
 
 std::atomic<uint64_t> global_count = 3;
 
@@ -69,8 +70,10 @@ void sieve(const std::vector<number> &primes, const uint64_t begin_segment, cons
 
 int main()
 {
-	printf("Sieving to %lld\n", SIEVE_LIM);
-	printf("Using %d threads\n", THREADS);
+	#if !defined QUIET && !defined BENCHMARK
+		printf("Sieving to %lld\n", SIEVE_LIM);
+		printf("Using %d threads\n", THREADS);
+	#endif
 
 	// start timer
 	std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
@@ -85,7 +88,9 @@ int main()
 	while (segment_count > 0)
 	{
 		uint64_t start_segment = segment_count - (segment_count / (THREADS - threads.size()));
-		printf("  New thread %04lld-%04lld\n", start_segment, segment_count);
+		#if !defined QUIET && !defined BENCHMARK
+			printf("  New thread %04lld-%04lld\n", start_segment, segment_count);
+		#endif
 		threads.push_back(new std::thread(sieve, std::ref(primes), start_segment, segment_count));
 		segment_count = start_segment;
 	}
@@ -95,7 +100,17 @@ int main()
 	// stop timer
 	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
 	
-	printf("Counted %lld primes!\n", global_count.load());
-	printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
+	#if !defined QUIET && !defined BENCHMARK
+		printf("Counted %lld primes!\n", global_count.load());
+		printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
+	#else
+		#if defined QUIET
+			printf("%lld\n", global_count.load());
+		#endif
+		#if defined BENCHMARK
+			printf("%d\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count());
+		#endif
+	#endif
+	fflush(stdout);
 	return 0;
 }
