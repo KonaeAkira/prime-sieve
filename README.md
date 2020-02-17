@@ -21,6 +21,7 @@ Intel i7-7700 | 672 ms | 160 ms
 Most compilers with C++17 will do.
 #### Linux
 ```
+git submodule update --init bitset2
 g++ -std=c++17 -Ofast -pthread main.cpp -o prime-sieve
 ```
 #### Windows
