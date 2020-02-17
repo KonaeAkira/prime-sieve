@@ -12,13 +12,17 @@
 const uint64_t SIEVE_LIM = 1e9;
 const uint64_t SIEVE_LIM_SQRT = std::sqrt(SIEVE_LIM);
 
-#ifdef SINGLE_THREAD
+#if defined SINGLE_THREAD
 	const uint64_t THREADS = 1;
 #else
 	const uint32_t THREADS = std::thread::hardware_concurrency();
 #endif
 
-const uint64_t SEGMENT_SIZE = SIZE;
+#if defined SIZE
+	const uint64_t SEGMENT_SIZE = SIZE;
+#else
+	const uint64_t SEGMENT_SIZE = 1 << 13;
+#endif
 
 std::atomic<uint64_t> global_count = 3;
 
@@ -102,13 +106,13 @@ int main()
 	
 	#if !defined QUIET && !defined BENCHMARK
 		printf("Counted %lld primes!\n", global_count.load());
-		printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
+		printf("Elapsed time: %ld ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
 	#else
 		#if defined QUIET
 			printf("%lld\n", global_count.load());
 		#endif
 		#if defined BENCHMARK
-			printf("%d\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count());
+			printf("%ld\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count());
 		#endif
 	#endif
 	fflush(stdout);
