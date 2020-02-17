@@ -1,92 +1,101 @@
 #include <cstdio>
+#include <cmath>
 #include <vector>
 #include <bitset>
-
 #include <algorithm>
 #include <thread>
-#include <mutex>
+#include <atomic>
 #include <chrono>
 
-#include "constants.hpp"
+#include "number.hpp"
 
-uint64_t count = sizeof(WHEEL_PRIMES) / sizeof(WHEEL_PRIMES[0]) - 1;
-std::mutex count_mutex;
-std::mutex stdio_mutex;
+#define unlikely(expr) __builtin_expect(!!(expr), 0)
+#define likely(expr) __builtin_expect(!!(expr), 1)
 
-struct data
+const uint64_t SIEVE_LIM = 1e9;
+const uint64_t SIEVE_LIM_SQRT = std::sqrt(SIEVE_LIM);
+
+const uint32_t THREADS = std::thread::hardware_concurrency();
+
+const uint64_t SEGMENT_SIZE = 1 << 13;
+
+std::atomic<uint64_t> global_count = 3;
+
+void presieve(std::vector<number> &primes)
 {
-	const uint64_t inc;
-	uint64_t num, pos;
-	data(const uint64_t inc, uint64_t num): inc(inc)
-	{
-		if (num > inc * inc)
+	std::bitset<SIEVE_LIM_SQRT + 1> bitset;
+	const uint64_t offset[48] = {10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4, 2, 6, 4, 6, 8, 4, 2, 4, 2, 4, 8, 6, 4, 6, 2, 4, 6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10, 2};
+	for (uint64_t i = 11, j = 0; i <= SIEVE_LIM_SQRT; i += offset[++j %= 48])
+		if (!bitset.test(i))
 		{
-			num = ((num - 1) / inc + 1) * inc;
-			while (WHEEL.test(num % WHEEL_SIZE))
-				num += inc;
+			primes.emplace_back(i);
+			for (uint64_t k = i * i; k <= SIEVE_LIM_SQRT; k += i)
+				bitset.set(k);
 		}
-		else num = inc * inc;
-		this->num = num;
-		pos = std::lower_bound(HOLES.begin(), HOLES.end(), num / inc % WHEEL_SIZE) - HOLES.begin();
-	}
-	void increment()
-	{
-		num += inc * (HOLES[pos + 1] - HOLES[pos]);
-		pos = (pos == HOLES_COUNT - 1 ? 0 : pos + 1);
-	}
-};
+}
 
-void sieve_segment(const uint64_t START_BLOCK, const uint64_t END_BLOCK)
+void sieve(const std::vector<number> &primes, const uint64_t begin_segment, const uint64_t end_segment)
 {
 	uint64_t internal_count = 0;
-	std::vector<data> bucket;
-	std::bitset<BLOCK_SIZE * WHEEL_SIZE> bitset;
-	for (const uint64_t prime : SIEVE_PRIMES)
-		bucket.emplace_back(prime, START_BLOCK * BLOCK_SIZE * WHEEL_SIZE);
-	for (uint64_t block = START_BLOCK; block < END_BLOCK; ++block)
+	std::vector<number> bucket;
+	bucket.reserve(primes.size());
+	for (const number prime : primes)
+		bucket.emplace_back(prime.get_number(), begin_segment * SEGMENT_SIZE * 210);
+	std::bitset<SEGMENT_SIZE * 48> bitset;
+	uint64_t begin_block, end_block;
+	for (uint64_t segment = begin_segment; segment < end_segment; ++segment)
 	{
-		const uint64_t start_num = block * BLOCK_SIZE * WHEEL_SIZE;
-		const uint64_t last_num = (block + 1) * BLOCK_SIZE * WHEEL_SIZE;
+		begin_block = segment * SEGMENT_SIZE;
+		end_block = (segment + 1) * SEGMENT_SIZE;
 		bitset.reset();
-		for (data &dat : bucket)
-			while (dat.num < last_num)
+		for (uint32_t i = 0; i < primes.size(); ++i)
+			while (bucket[i].get_block() < end_block)
 			{
-				bitset.set(dat.num - start_num);
-				dat.increment();
+				bitset.set((bucket[i].get_block() - begin_block) * 48 + bucket[i].get_rest());
+				bucket[i] += primes[i];
 			}
-		if (last_num <= SIEVE_LIMIT)
-			for (uint64_t offset = 0; offset < BLOCK_SIZE * WHEEL_SIZE; offset += WHEEL_SIZE)
-				for (uint64_t i = 0; i < HOLES_COUNT; ++i)
-					internal_count += !bitset.test(offset + HOLES[i]);
+		if (end_block * 210 <= SIEVE_LIM)
+			internal_count += bitset.size() - bitset.count();
 		else
-			for (uint64_t offset = 0; offset < BLOCK_SIZE * WHEEL_SIZE; offset += WHEEL_SIZE)
-				for (uint64_t i = 0; i < HOLES_COUNT; ++i)
-					internal_count += !bitset.test(offset + HOLES[i]) && start_num + offset + HOLES[i] < SIEVE_LIMIT;
+		{
+			const uint8_t value[48] = {1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 121, 127, 131, 137, 139, 143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209};
+			for (uint64_t i = 0; (begin_block + i / 48) * 210 + value[i % 48] < SIEVE_LIM; ++i)
+				internal_count += !bitset.test(i);
+			break;
+		}
 	}
-	count_mutex.lock();
-	count += internal_count;
-	count_mutex.unlock();
+	global_count += internal_count;
 }
 
 int main()
 {
-	printf("Sieving to %d using %d threads\n", SIEVE_LIMIT, THREADS);
+	printf("Sieving to %lld\n", SIEVE_LIM);
+	printf("Using %d threads\n", THREADS);
+
+	// start timer
 	std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+	
+	// generate sieving primes
+	std::vector<number> primes;
+	presieve(primes);
+	
+	// spawn workers
 	std::vector<std::thread*> threads;
-	for (uint64_t block = 0, job_size; block < BLOCK_COUNT; block += job_size)
+	uint64_t segment_count = (SIEVE_LIM - 1) / (SEGMENT_SIZE * 210) + 1;
+	while (segment_count > 0)
 	{
-		job_size = (BLOCK_COUNT - block - 1) / (THREADS - threads.size()) + 1;
-		stdio_mutex.lock();
-		printf("  New thread [#%05d-#%05d]\n", block, block + job_size);
-		stdio_mutex.unlock();
-		threads.push_back(new std::thread(sieve_segment, block, block + job_size));
+		uint64_t start_segment = segment_count - (segment_count / (THREADS - threads.size()));
+		printf("  New thread %04lld-%04lld\n", start_segment, segment_count);
+		threads.push_back(new std::thread(sieve, std::ref(primes), start_segment, segment_count));
+		segment_count = start_segment;
 	}
-	for (std::thread *thread : threads)
+	for (auto thread : threads)
 		thread->join();
+	
+	// stop timer
 	std::chrono::high_resolution_clock::time_point stop_time = std::chrono::high_resolution_clock::now();
-	printf("Counted %d primes\n", count);
+	
+	printf("Counted %lld primes!\n", global_count.load());
 	printf("Elapsed time: %d ms\n", std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time).count() / 1000);
-	if (SIEVE_LIMIT == 1e9 && count != 50847534)
-		printf("\e[0;31m[ERROR] \e[0mCount should be 50847534\n");
 	return 0;
 }
