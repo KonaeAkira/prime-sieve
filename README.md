@@ -15,6 +15,7 @@ Submit a pull request to add your benchmarks.
 CPU | Single-Threaded | Multi-Threaded
 :---: | ---: | ---: |
 Intel i5-8265U | 892 ms | 202 ms
+Intel i7-7700 | 826 ms | 170 ms
 
 ## Compiling
 Most compilers with C++17 will do.
