@@ -130,6 +130,8 @@ public:
 	uint8_t get_rest() const { return rest; }
 	uint64_t get_number() const { return block * 210 + value[rest]; }
 	
+	void retract(uint64_t blocks) { block -= blocks; }
+	
 	number &operator += (const number rhs)
 	{
 		block += rhs.block * data[rest][rhs.rest][0] + data[rest][rhs.rest][1];
